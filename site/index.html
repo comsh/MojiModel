@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>ModelTweak2</title>
+<link rel="stylesheet" type="text/css" href="css/default.css" />
+<script type="importmap">
+{ "imports": {
+  "three": "./js/threejs/three.module.js",
+  "three/addons/": "./js/threejs/examples/jsm/"
+} }
+</script>
+</head><body oncontextmenu="return false;">
+<div id="view"></div>
+<div id="panel">
+<span class="label">フォント</span> : <select id="fonts"></select><br />
+<span class="label">文字列</span> : <input type="text" size="10" value="はろー" id="letters"/><br />
+<span class="label">厚み</span> : <input type="text" size="3" value="0.1" id="thick"/><br />
+<span class="label"></span><button id="update">反映</button> <button id="save">model出力</button>
+</div>
+<script type="module">
+  import * as THREE from 'three';
+  import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+  import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+  import { OBJExporter } from 'three/addons/exporters/ObjExporter.js';
+  import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+
+  window.main={};
+  main.node = document.getElementById("view");
+  main.scene = new THREE.Scene();
+  main.renderer = new THREE.WebGLRenderer({alpha:true});
+  main.renderer.setPixelRatio(window.devicePixelRatio);
+  main.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+  main.camera.position.x = 0;
+  main.camera.position.y = 0;
+  main.camera.position.z = 3;
+  main.camera.lookAt(0, 0, 0);
+  const light=new THREE.PointLight(0xffffff,1,100);
+  light.position.set(0, 1, 1);
+  main.scene.add(light);
+
+  function windowresize() {
+    const w = main.node.offsetWidth;
+    const h = main.node.offsetHeight;
+    main.camera.aspect = w / h;
+    main.camera.updateProjectionMatrix();
+    main.renderer.setSize(w, h);
+  }
+  main.node.appendChild(main.renderer.domElement);
+  window.onresize = windowresize;
+  windowresize();
+
+  window.chrome.webview.addEventListener("message", function(e){
+    const sel = document.getElementById('fonts');
+    for (let i=sel.options.length - 1; i >= 0; i--) sel.remove(i);
+    for (let f of e.data.split('\n')) {
+      const o=document.createElement("option");
+      o.text = f; o.value = f;
+      sel.appendChild(o);
+    }
+  });
+  let afid = 0;
+  document.getElementById('update').onclick = function () {
+    const fontname = document.getElementById('fonts').value;
+    const letters = document.getElementById('letters').value;
+    const thick = parseFloat(document.getElementById('thick').value)||0;
+    if (fontname == '' || letters == '' || thick <= 0) return;
+    const fl=new FontLoader();
+    fl.load('js/font/'+fontname+'.json',(f)=>{
+      const geo=new TextGeometry(letters,{font:f,size:0.4,height:thick});
+      geo.center();
+      const mate=new THREE.MeshToonMaterial({color: 0xffffff});
+      const text=new THREE.Mesh(geo,mate);
+      const o=main.scene.getObjectByName('text');
+      if (o != null) main.scene.remove(o);
+	  text.name="text";
+      main.scene.add(text);
+    });
+    if (afid != 0) cancelAnimationFrame(afid);
+    function animate() {
+      afid=requestAnimationFrame(animate);
+      const o=main.scene.getObjectByName('text');
+      if (o == null) return;
+      const now=new Date();
+      const s = Math.sin(now.getTime()/1000)-0.5;
+      const s2 = Math.sin(now.getTime()/700)-0.5;
+      o.rotateZ(s2*s2*s2 / 1900);
+      o.rotateX(s / 700);
+      o.rotateY(0.005);
+      main.renderer.render(main.scene, main.camera);
+    };
+    animate();
+  };
+  document.getElementById('save').onclick = function () {
+    const o=main.scene.getObjectByName('text');
+    if (o == null) return;
+
+    //flat->indexed
+    const indexed=mergeVertices(o.geometry);
+    const oidx=new THREE.Mesh(indexed);
+
+    // c#側へは文字列しか渡せないので一旦OBJ形式にする
+    const otxt=new OBJExporter().parse(oidx);
+    window.chrome.webview.postMessage(otxt); 
+  }
+</script>
+</body></html>

@@ -1,0 +1,38 @@
+html, body, div {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+#view {
+    background-color: #9cf;
+}
+#view canvas {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+#panel {
+    position: absolute;
+    background-color: #ddd;
+    border: gray 1px solid;
+    left:4px;
+    top:4px;
+    width:15em;
+    height:7em;
+    font-size: 12px;
+    padding: 0.35em;
+}
+#panel .label {
+    display: inline-block;
+    width: 4em;
+    text-align: center;
+}
+#panel button {
+    margin-top:0; margin-bottom:0;
+    padding-top:0; padding-bottom:0;
+}
+#panel select {
+    width: 8em;
+}
