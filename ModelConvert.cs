@@ -45,7 +45,6 @@ public static class ModelConvert {
                     vn.Add(new float[]{x,y,z});
                 }
             }else if(token[0]=='f'){        //triangle
-                string no;
                 c=Next(line,' ',c,cols,out token);  // 3頂点で三角形１つ
                 string[] sa=token.Split('/');  // 4/4/4のような形。現状全部同じ値なので1つだけとる
                 tri.Add((ushort)(ushort.Parse(sa[0])-1));

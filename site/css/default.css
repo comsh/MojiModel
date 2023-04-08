@@ -19,8 +19,9 @@ html, body, div {
     border: gray 1px solid;
     left:4px;
     top:4px;
+    line-height:1.1em;
     width:15em;
-    height:7em;
+    height:26em;
     font-size: 12px;
     padding: 0.35em;
 }
@@ -35,4 +36,7 @@ html, body, div {
 }
 #panel select {
     width: 8em;
+}
+input[type="range"] {
+    width: 6em;
 }

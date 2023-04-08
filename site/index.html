@@ -12,10 +12,23 @@
 </head><body oncontextmenu="return false;">
 <div id="view"></div>
 <div id="panel">
+<p>
 <span class="label">フォント</span> : <select id="fonts"></select><br />
 <span class="label">文字列</span> : <input type="text" size="10" value="はろー" id="letters"/><br />
-<span class="label">厚み</span> : <input type="text" size="3" value="0.1" id="thick"/><br />
-<span class="label"></span><button id="update">反映</button> <button id="save">model出力</button>
+<span class="label">厚み</span> : <input type="text" value="0.1" size=3 id="thick"/><br />
+<span class="label">分割数</span> : <input type="text" value="12" size=3 id="seg"/><br />
+</p><p>
+<input type="checkbox" id="bevel_on"/>ベベル<br />
+<span class="label">  深さ</span> : <input type="text" size=3 value="0.03" id="bevel_thick"/><br />
+<span class="label">  サイズ</span> : <input type="text" size=3 value="0.03" id="bevel_size"/><br />
+<span class="label">  Offset</span> : <input type="text" size=3 value="0" id="bevel_offset"/><br />
+<span class="label">  分割数</span> : <input type="text" value="1" size="3" id="bevel_seg"/><br />
+</p><p>
+<span class="label"></span><button id="update">反映</button> <button id="save">model出力</button><br />
+</p><p>
+<span class="label">カメラ</span> : 近<input type="range" id="zoom" step="0.1" value="2.5" min="0.5" max="5" style="width:6em" />遠<br />
+<input type="checkbox" id="anim"/>回転停止 &nbsp; <input type="checkbox" id="wire"/>ワイヤー<br />
+</p>
 </div>
 <script type="module">
   import * as THREE from 'three';
@@ -32,7 +45,7 @@
   main.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
   main.camera.position.x = 0;
   main.camera.position.y = 0;
-  main.camera.position.z = 3;
+  main.camera.position.z = 2.5;
   main.camera.lookAt(0, 0, 0);
   const light=new THREE.PointLight(0xffffff,1,100);
   light.position.set(0, 1, 1);
@@ -63,12 +76,25 @@
     const fontname = document.getElementById('fonts').value;
     const letters = document.getElementById('letters').value;
     const thick = parseFloat(document.getElementById('thick').value)||0;
-    if (fontname == '' || letters == '' || thick <= 0) return;
+    const seg=parseInt(document.getElementById('seg').value)||0;
+    const bevel_on = document.getElementById('bevel_on').checked;
+    const bevel_thick = parseFloat(document.getElementById('bevel_thick').value) || 0;
+    const bevel_size = parseFloat(document.getElementById('bevel_size').value) || 0;
+    const bevel_offset = parseFloat(document.getElementById('bevel_offset').value) || 0;
+    const bevel_seg = parseInt(document.getElementById('bevel_seg').value) || 0;
+    if (fontname == '' || letters == '' || thick < 0 || seg <= 0
+        || bevel_on && (bevel_size<0 || bevel_offset<0 || bevel_seg<=0) ) return;
     const fl=new FontLoader();
     fl.load('js/font/'+fontname+'.json',(f)=>{
-      const geo=new TextGeometry(letters,{font:f,size:0.4,height:thick});
+      const m = 0.4;
+      const geo = new TextGeometry(letters, {
+        font: f, size: m, height: thick, curveSegments: seg,
+        bevelEnabled: bevel_on, bevelThickness: m*bevel_thick, bevelSize:m*bevel_size,
+        bevelOffset: m*bevel_offset, bevelSegments: bevel_seg
+      });
       geo.center();
       const mate=new THREE.MeshToonMaterial({color: 0xffffff});
+      mate.wireframe=document.getElementById('wire').checked;
       const text=new THREE.Mesh(geo,mate);
       const o=main.scene.getObjectByName('text');
       if (o != null) main.scene.remove(o);
@@ -77,20 +103,22 @@
     });
     if (afid != 0) cancelAnimationFrame(afid);
     function animate() {
-      afid=requestAnimationFrame(animate);
-      const o=main.scene.getObjectByName('text');
+      afid = requestAnimationFrame(animate);
+      const o = main.scene.getObjectByName('text');
       if (o == null) return;
-      const now=new Date();
-      const s = Math.sin(now.getTime()/1000)-0.5;
-      const s2 = Math.sin(now.getTime()/700)-0.5;
-      o.rotateZ(s2*s2*s2 / 1900);
-      o.rotateX(s / 700);
-      o.rotateY(0.005);
+      if (!document.getElementById('anim').checked){
+        const now = new Date();
+        const s = Math.sin(now.getTime() / 1000) - 0.5;
+        const s2 = Math.sin(now.getTime() / 700) - 0.5;
+        o.rotateZ(s2 * s2 * s2 / 1900);
+        o.rotateX(s / 700);
+        o.rotateY(0.005);
+      }
       main.renderer.render(main.scene, main.camera);
     };
     animate();
   };
-  document.getElementById('save').onclick = function () {
+  document.getElementById('save').onclick = function (e) {
     const o=main.scene.getObjectByName('text');
     if (o == null) return;
 
@@ -101,6 +129,14 @@
     // c#側へは文字列しか渡せないので一旦OBJ形式にする
     const otxt=new OBJExporter().parse(oidx);
     window.chrome.webview.postMessage(otxt); 
-  }
+  };
+  document.getElementById('zoom').oninput = function (e) {
+    main.camera.position.z = e.target.value;
+  };
+  document.getElementById('wire').onchange = function (e) {
+    const o=main.scene.getObjectByName('text');
+    if (o == null) return;
+	o.material.wireframe=e.target.checked;
+  };
 </script>
 </body></html>
