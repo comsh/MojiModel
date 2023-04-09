@@ -24,7 +24,7 @@
 <span class="label">  Offset</span> : <input type="text" size=3 value="0" id="bevel_offset"/><br />
 <span class="label">  分割数</span> : <input type="text" value="1" size="3" id="bevel_seg"/><br />
 </p><p>
-<span class="label"></span><button id="update">反映</button> <button id="save">model出力</button><br />
+<span class="label" id=vercnt></span> <button id="update">反映</button> <button id="save">model出力</button><br />
 </p><p>
 <span class="label">カメラ</span> : 近<input type="range" id="zoom" step="0.1" value="2.5" min="0.5" max="5" style="width:6em" />遠<br />
 <input type="checkbox" id="anim"/>回転停止 &nbsp; <input type="checkbox" id="wire"/>ワイヤー<br />
@@ -83,7 +83,7 @@
     const bevel_offset = parseFloat(document.getElementById('bevel_offset').value) || 0;
     const bevel_seg = parseInt(document.getElementById('bevel_seg').value) || 0;
     if (fontname == '' || letters == '' || thick < 0 || seg <= 0
-        || bevel_on && (bevel_size<0 || bevel_offset<0 || bevel_seg<=0) ) return;
+        || bevel_on && (bevel_size<0 || bevel_offset<0 || bevel_seg<0) ) return;
     const fl=new FontLoader();
     fl.load('js/font/'+fontname+'.json',(f)=>{
       const m = 0.4;
@@ -93,9 +93,16 @@
         bevelOffset: m*bevel_offset, bevelSegments: bevel_seg
       });
       geo.center();
+	  const indexed=mergeVertices(geo);
+	  const n=indexed.attributes.position.count;
+	  if(n>65536){
+		document.getElementById('vercnt').innerHTML='<font color=red>'+n+'<br>頂点</font>';
+	  }else{
+		document.getElementById('vercnt').innerHTML=n+'<br>頂点';
+	  }
       const mate=new THREE.MeshToonMaterial({color: 0xffffff});
       mate.wireframe=document.getElementById('wire').checked;
-      const text=new THREE.Mesh(geo,mate);
+      const text=new THREE.Mesh(indexed,mate);
       const o=main.scene.getObjectByName('text');
       if (o != null) main.scene.remove(o);
 	  text.name="text";
@@ -122,12 +129,15 @@
     const o=main.scene.getObjectByName('text');
     if (o == null) return;
 
-    //flat->indexed
-    const indexed=mergeVertices(o.geometry);
-    const oidx=new THREE.Mesh(indexed);
+	if(o.geometry.attributes.position.count>65536){
+		alert("頂点数が多すぎます");
+		return;
+	}
+
+    const out=new THREE.Mesh(o.geometry);
 
     // c#側へは文字列しか渡せないので一旦OBJ形式にする
-    const otxt=new OBJExporter().parse(oidx);
+    const otxt=new OBJExporter().parse(out);
     window.chrome.webview.postMessage(otxt); 
   };
   document.getElementById('zoom').oninput = function (e) {

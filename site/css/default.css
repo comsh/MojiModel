@@ -40,3 +40,7 @@ html, body, div {
 input[type="range"] {
     width: 6em;
 }
+#vercnt {
+	font-size:80%;
+	line-height:1em;
+}
