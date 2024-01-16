@@ -14,7 +14,8 @@
 <div id="panel">
 <p>
 <span class="label">フォント</span> : <select id="fonts"></select><br />
-<span class="label">文字列</span> : <input type="text" size="10" value="はろー" id="letters"/><br />
+<span class="label">文字列</span> : <input type="text" size="6" value="はろー" id="letters"/><button id="charsel">選</button><br />
+<div id="charpanel"></div>
 <span class="label">厚み</span> : <input type="text" value="0.1" size=3 id="thick"/><br />
 <span class="label">分割数</span> : <input type="text" value="12" size=3 id="seg"/><br />
 </p><p>
@@ -31,122 +32,182 @@
 </p>
 </div>
 <script type="module">
-  import * as THREE from 'three';
-  import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-  import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-  import { OBJExporter } from 'three/addons/exporters/ObjExporter.js';
-  import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+	import * as THREE from 'three';
+	import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+	import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+	import { OBJExporter } from 'three/addons/exporters/ObjExporter.js';
+	import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
-  window.main={};
-  main.node = document.getElementById("view");
-  main.scene = new THREE.Scene();
-  main.renderer = new THREE.WebGLRenderer({alpha:true});
-  main.renderer.setPixelRatio(window.devicePixelRatio);
-  main.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
-  main.camera.position.x = 0;
-  main.camera.position.y = 0;
-  main.camera.position.z = 2.5;
-  main.camera.lookAt(0, 0, 0);
-  const light=new THREE.PointLight(0xffffff,1,100);
-  light.position.set(0, 1, 1);
-  main.scene.add(light);
+	window.main={};
+	main.node = document.getElementById("view");
+	main.scene = new THREE.Scene();
+	main.renderer = new THREE.WebGLRenderer({alpha:true});
+	main.renderer.setPixelRatio(window.devicePixelRatio);
+	main.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+	main.camera.position.x = 0;
+	main.camera.position.y = 0;
+	main.camera.position.z = 2.5;
+	main.camera.lookAt(0, 0, 0);
+	const light=new THREE.PointLight(0xffffff,1,100);
+	light.position.set(0, 1, 1);
+	main.scene.add(light);
 
-  function windowresize() {
-    const w = main.node.offsetWidth;
-    const h = main.node.offsetHeight;
-    main.camera.aspect = w / h;
-    main.camera.updateProjectionMatrix();
-    main.renderer.setSize(w, h);
-  }
-  main.node.appendChild(main.renderer.domElement);
-  window.onresize = windowresize;
-  windowresize();
-
-  window.chrome.webview.addEventListener("message", function(e){
-    const sel = document.getElementById('fonts');
-    for (let i=sel.options.length - 1; i >= 0; i--) sel.remove(i);
-    for (let f of e.data.split('\n')) {
-      const o=document.createElement("option");
-      o.text = f; o.value = f;
-      sel.appendChild(o);
-    }
-  });
-  let afid = 0;
-  document.getElementById('update').onclick = function () {
-    const fontname = document.getElementById('fonts').value;
-    const letters = document.getElementById('letters').value;
-    const thick = parseFloat(document.getElementById('thick').value)||0;
-    const seg=parseInt(document.getElementById('seg').value)||0;
-    const bevel_on = document.getElementById('bevel_on').checked;
-    const bevel_thick = parseFloat(document.getElementById('bevel_thick').value) || 0;
-    const bevel_size = parseFloat(document.getElementById('bevel_size').value) || 0;
-    const bevel_offset = parseFloat(document.getElementById('bevel_offset').value) || 0;
-    const bevel_seg = parseInt(document.getElementById('bevel_seg').value) || 0;
-    if (fontname == '' || letters == '' || thick < 0 || seg <= 0
-        || bevel_on && (bevel_size<0 || bevel_offset<0 || bevel_seg<0) ) return;
-    const fl=new FontLoader();
-    fl.load('js/font/'+fontname+'.json',(f)=>{
-      const m = 0.4;
-      const geo = new TextGeometry(letters, {
-        font: f, size: m, height: thick, curveSegments: seg,
-        bevelEnabled: bevel_on, bevelThickness: m*bevel_thick, bevelSize:m*bevel_size,
-        bevelOffset: m*bevel_offset, bevelSegments: bevel_seg
-      });
-      geo.center();
-	  const indexed=mergeVertices(geo);
-	  const n=indexed.attributes.position.count;
-	  if(n>65536){
-		document.getElementById('vercnt').innerHTML='<font color=red>'+n+'<br>頂点</font>';
-	  }else{
-		document.getElementById('vercnt').innerHTML=n+'<br>頂点';
-	  }
-      const mate=new THREE.MeshToonMaterial({color: 0xffffff});
-      mate.wireframe=document.getElementById('wire').checked;
-      const text=new THREE.Mesh(indexed,mate);
-      const o=main.scene.getObjectByName('text');
-      if (o != null) main.scene.remove(o);
-	  text.name="text";
-      main.scene.add(text);
-    });
-    if (afid != 0) cancelAnimationFrame(afid);
-    function animate() {
-      afid = requestAnimationFrame(animate);
-      const o = main.scene.getObjectByName('text');
-      if (o == null) return;
-      if (!document.getElementById('anim').checked){
-        const now = new Date();
-        const s = Math.sin(now.getTime() / 1000) - 0.5;
-        const s2 = Math.sin(now.getTime() / 700) - 0.5;
-        o.rotateZ(s2 * s2 * s2 / 1900);
-        o.rotateX(s / 700);
-        o.rotateY(0.005);
-      }
-      main.renderer.render(main.scene, main.camera);
-    };
-    animate();
-  };
-  document.getElementById('save').onclick = function (e) {
-    const o=main.scene.getObjectByName('text');
-    if (o == null) return;
-
-	if(o.geometry.attributes.position.count>65536){
-		alert("頂点数が多すぎます");
-		return;
+	function windowresize() {
+		const w = main.node.offsetWidth;
+		const h = main.node.offsetHeight;
+		main.camera.aspect = w / h;
+		main.camera.updateProjectionMatrix();
+		main.renderer.setSize(w, h);
 	}
+	main.node.appendChild(main.renderer.domElement);
+	window.onresize = windowresize;
+	windowresize();
 
-    const out=new THREE.Mesh(o.geometry);
+	window.chrome.webview.addEventListener("message", function(e){
+		const sel = document.getElementById('fonts');
+		for (let i=sel.options.length - 1; i >= 0; i--) sel.remove(i);
+		for (let f of e.data.split('\n')) {
+			const o=document.createElement("option");
+			o.text = f; o.value = f;
+			sel.appendChild(o);
+		}
+	});
 
-    // c#側へは文字列しか渡せないので一旦OBJ形式にする
-    const otxt=new OBJExporter().parse(out);
-    window.chrome.webview.postMessage(otxt); 
-  };
-  document.getElementById('zoom').oninput = function (e) {
-    main.camera.position.z = e.target.value;
-  };
-  document.getElementById('wire').onchange = function (e) {
-    const o=main.scene.getObjectByName('text');
-    if (o == null) return;
-	o.material.wireframe=e.target.checked;
-  };
+	let afid = 0;
+	document.getElementById('update').onclick = function () {
+		const fontname = document.getElementById('fonts').value;
+		const letters = document.getElementById('letters').value;
+		const thick = parseFloat(document.getElementById('thick').value)||0;
+		const seg=parseInt(document.getElementById('seg').value)||0;
+		const bevel_on = document.getElementById('bevel_on').checked;
+		const bevel_thick = parseFloat(document.getElementById('bevel_thick').value) || 0;
+		const bevel_size = parseFloat(document.getElementById('bevel_size').value) || 0;
+		const bevel_offset = parseFloat(document.getElementById('bevel_offset').value) || 0;
+		const bevel_seg = parseInt(document.getElementById('bevel_seg').value) || 0;
+		if (fontname == '' || letters == '' || thick < 0 || seg <= 0
+			|| bevel_on && (bevel_size<0 || bevel_offset<0 || bevel_seg<0) ) return;
+		const fl=new FontLoader();
+		fl.load('js/font/'+fontname+'.json',(f)=>{
+			const m = 0.4;
+			const geo = new TextGeometry(letters, {
+				font: f, size: m, height: thick, curveSegments: seg,
+				bevelEnabled: bevel_on, bevelThickness: m*bevel_thick, bevelSize:m*bevel_size,
+				bevelOffset: m*bevel_offset, bevelSegments: bevel_seg
+			});
+			geo.center();
+			const indexed=mergeVertices(geo);
+			const n=indexed.attributes.position.count;
+			if(n>65536){
+				document.getElementById('vercnt').innerHTML='<font color=red>'+n+'<br>頂点</font>';
+			}else{
+				document.getElementById('vercnt').innerHTML=n+'<br>頂点';
+			}
+			const mate=new THREE.MeshToonMaterial({color: 0xffffff});
+			mate.wireframe=document.getElementById('wire').checked;
+			const text=new THREE.Mesh(indexed,mate);
+			const o=main.scene.getObjectByName('text');
+			if (o != null) main.scene.remove(o);
+			text.name="text";
+			main.scene.add(text);
+		});
+		if (afid != 0) cancelAnimationFrame(afid);
+		function animate() {
+			afid = requestAnimationFrame(animate);
+			const o = main.scene.getObjectByName('text');
+			if (o == null) return;
+			if (!document.getElementById('anim').checked){
+				const now = new Date();
+				const s = Math.sin(now.getTime() / 1000) - 0.5;
+				const s2 = Math.sin(now.getTime() / 700) - 0.5;
+				o.rotateZ(s2 * s2 * s2 / 1900);
+				o.rotateX(s / 700);
+				o.rotateY(0.005);
+			}
+			main.renderer.render(main.scene, main.camera);
+		}
+		animate();
+	};
+	document.getElementById('save').onclick = function (e) {
+		const o=main.scene.getObjectByName('text');
+		if (o == null) return;
+
+		if(o.geometry.attributes.position.count>65536){
+			alert("頂点数が多すぎます");
+			return;
+		}
+
+		const out=new THREE.Mesh(o.geometry);
+
+		// c#側へは文字列しか渡せないので一旦OBJ形式にする
+		const otxt=new OBJExporter().parse(out);
+		window.chrome.webview.postMessage(otxt); 
+	};
+	document.getElementById('zoom').oninput = function (e) {
+		main.camera.position.z = e.target.value;
+	};
+	document.getElementById('wire').onchange = function (e) {
+		const o=main.scene.getObjectByName('text');
+		if (o == null) return;
+		o.material.wireframe=e.target.checked;
+	};
+
+	const csbtn=document.getElementById('charsel');
+	csbtn.onclick = function () {
+		const fontname = document.getElementById('fonts').value;
+		if(fontname=="") return;
+		const cp=document.getElementById('charpanel');
+		if(cp.style.display=="block"){ cp.style.display=""; return;}
+		const rect=csbtn.getBoundingClientRect();
+		cp.style.display="block"
+		cp.style.top=rect.bottom+'px';
+		cp.style.left=rect.left+'px';
+		const fl=new FontLoader();
+		fl.load('js/font/'+fontname+'.json',(f)=>{
+			const res=parseInt(f.data.resolution);
+			const bbox=f.data.boundingBox;
+			let ih='';
+			for(let k of Object.keys(f.data.glyphs)){
+				const g=f.data.glyphs[k];
+				if(g.o=="") continue;
+				const pa=g.o.toUpperCase().split(' ');
+				const palen=pa.length;
+				let numidx=0;
+				// f.data.boundingBoxを使うと(たまにデカい文字があるので)文字によっては小さくなりすぎる
+				// 各文字ごとの座標範囲を求める
+				let xmax=Number.MIN_SAFE_INTEGER,xmin=Number.MAX_SAFE_INTEGER,ymax=Number.MIN_SAFE_INTEGER,ymin=Number.MAX_SAFE_INTEGER;
+				for(let i=0; i<palen; i++){
+					const n=parseInt(pa[i]);
+					if(isNaN(n)) numidx=0; else{
+						if(numidx==0){
+							if(xmin>n) xmin=n;
+							if(xmax<n) xmax=n;
+						}else if(numidx==1){
+							if(ymin>n) ymin=n;
+							if(ymax<n) ymax=n;
+						}
+						numidx++;
+					}
+				}
+				for(let i=0; i<palen; i++){
+					const n=parseInt(pa[i]);
+					if(isNaN(n)){
+						if(pa[i]=='Q'){ //制御点と次頂点との順順序は逆
+							let t=pa[i+1]; pa[i+1]=pa[i+3]; pa[i+3]=t;
+							t=pa[i+2]; pa[i+2]=pa[i+4]; pa[i+4]=t;
+							numidx=0; continue;
+						}
+						numidx=0;
+					}else{
+						if(numidx%2==1){ pa[i]=ymax-n;} //上下は逆
+						numidx++;
+					}
+				}
+				const vbox=[xmin,0,xmax-xmin,ymax-ymin].join(',');
+				let path=pa.join(' ');
+				ih+='<button class=moji onclick="document.getElementById(\'letters\').value+=\''+k+'\';document.getElementById(\'charpanel\').style.display=\'\';"><svg viewbox="'+vbox+'"><path d="'+path+'" /></svg></button>';
+			}
+			cp.innerHTML=ih;
+		});
+	};
 </script>
 </body></html>

@@ -1,10 +1,14 @@
-html, body, div {
+html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
 }
 #view {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
     background-color: #9cf;
 }
 #view canvas {
@@ -44,3 +48,37 @@ input[type="range"] {
 	font-size:80%;
 	line-height:1em;
 }
+#charpanel {
+    position: absolute;
+    background-color: #fff;
+    border: gray 1px solid;
+    width:400px;
+    height:400px;
+    margin:0px;
+    padding: 2px;
+    display:none;
+    overflow-y:auto;
+}
+#charpanel button.moji {
+	width:38px;
+	height:38px;
+    margin:0px;
+    padding:3px;
+    border: gray 1px solid;
+	display:inline-block;
+}
+#charpanel svg {
+    margin:0px;
+    padding:0px;
+	width:100%;
+	height:100%;
+}
+#charpanel path {
+    margin:0px;
+    padding:0px;
+	fill:black;
+	stroke:black;
+	width:100%;
+	height:100%;
+}
+
