@@ -11,7 +11,7 @@ public partial class Form1:Form {
         InitBrowser();
     }
     async void InitBrowser(){
-        var opt=new CoreWebView2EnvironmentOptions("--allow-file-access-from-files");
+        var opt=new CoreWebView2EnvironmentOptions("--allow-file-access-from-files --disable-background-networking --disable-component-update --disable-sync --no-proxy-server --disable-webrtc");
         var env= await CoreWebView2Environment.CreateAsync(null,null,opt);
         await webview2.EnsureCoreWebView2Async(env);
         string site=Directory.GetCurrentDirectory().Replace("\\","/");
